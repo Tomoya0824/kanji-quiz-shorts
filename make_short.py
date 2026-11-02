@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 W, H, FPS = 1080, 1920, 30
-T_HOOK, T_COUNT0, T_COUNT1, T_REVEAL, T_CTA, T_END = 0.0, 2.2, 7.2, 7.6, 13.0, 15.5
+T_HOOK, T_COUNT0, T_COUNT1, T_REVEAL, T_CTA, T_END = 0.0, 2.2, 7.2, 7.6, 14.0, 16.5
 FONT_BLACK = "/usr/share/fonts/opentype/noto/NotoSansCJK-Black.ttc"
 FONT_BOLD = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
 SERIF = "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc"
@@ -114,10 +114,21 @@ def frame(t, q, bg):
     if revealed:
         a = ease_out((t - T_REVEAL - 0.4) / 0.4)
         if a > 0:
-            y0 = 1580 + (1 - a) * 80
-            d.rounded_rectangle([90, y0, W - 90, y0 + 260], 36, fill=(0, 0, 0, int(140 * a)))
-            text_center(d, W / 2, y0 + 70, f"意味：{q['meaning']}", font(FONT_BOLD, 46), (255, 255, 255, int(255 * a)))
-            text_center(d, W / 2, y0 + 170, q["example"], font(FONT_BOLD, 42), ACCENT + (int(255 * a),))
+            origin = q.get("origin", "")
+            lines = [origin[i:i + 20] for i in range(0, len(origin), 20)][:2]
+            ph = 190 + (40 + 46 * len(lines) if lines else 0)
+            y0 = 1555 + (1 - a) * 80
+            d.rounded_rectangle([70, y0, W - 70, y0 + ph], 36, fill=(0, 0, 0, int(150 * a)))
+            text_center(d, W / 2, y0 + 60, f"意味：{q['meaning']}", font(FONT_BOLD, 44), (255, 255, 255, int(255 * a)))
+            text_center(d, W / 2, y0 + 135, q["example"], font(FONT_BOLD, 40), ACCENT + (int(255 * a),))
+            if lines:
+                # 由来は答え発表の少し後に出す
+                b = ease_out((t - T_REVEAL - 1.6) / 0.4)
+                if b > 0:
+                    d.line([140, y0 + 182, W - 140, y0 + 182], fill=(255, 255, 255, int(60 * b)), width=2)
+                    for k, ln in enumerate(lines):
+                        prefix = "由来：" if k == 0 else ""
+                        text_center(d, W / 2, y0 + 220 + k * 46, prefix + ln, font(FONT_BOLD, 38), (200, 220, 255, int(255 * b)))
         s = pop(t, T_REVEAL, 0.4)
         if s > 0 and t < T_CTA:
             text_center(d, W / 2, 985, "正解は…", font(FONT_BLACK, int(60 * s) or 1), WHITE)
