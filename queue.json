@@ -1,0 +1,7 @@
+{
+  "note": "Apps Script がここを見て、items の未投稿分を古い順に1時間に1本まで公開投稿する。Claude が動画を push したあとに追加する。",
+  "items": [],
+  "already_uploaded": [
+    {"nnn": "001", "id": "rEfvBEAqZ4s", "date": "2026-11-03"}
+  ]
+}
