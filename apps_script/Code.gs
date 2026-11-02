@@ -86,4 +86,78 @@ function pushStatus() {
   const ids = Array.from(new Set(Object.values(uploaded).map(u => u.id).concat(extra)));
   const stats = {};
   for (let i = 0; i < ids.length; i += 50) {
-    const r =
+    const r = YouTube.Videos.list('statistics', { id: ids.slice(i, i + 50).join(',') });
+    (r.items || []).forEach(v => {
+      stats[v.id] = {
+        views: Number(v.statistics.viewCount || 0),
+        likes: Number(v.statistics.likeCount || 0),
+        comments: Number(v.statistics.commentCount || 0),
+      };
+    });
+  }
+  const status = {
+    updated: new Date().toISOString(),
+    last_error: props.getProperty('last_error') || null,
+    uploaded: uploaded,
+    stats: stats,
+  };
+  githubPut_('status.json', JSON.stringify(status, null, 2), 'Apps Script: 投稿結果と再生数を更新');
+  props.setProperty('last_status_push', String(Date.now()));
+}
+
+/** 最初に1回だけ手動で実行：1時間ごとのトリガーを作る（作り直しても安全）。 */
+function setup() {
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'uploadNext')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('uploadNext').timeBased().everyHours(1).create();
+  YouTube.Channels.list('snippet', { mine: true });
+  UrlFetchApp.fetch(REPO_RAW + 'README.md');
+}
+
+/** すでに Zapier で投稿した動画を記録に登録しておく（二重投稿防止）。 */
+function registerExisting() {
+  const props = PropertiesService.getScriptProperties();
+  const uploaded = JSON.parse(props.getProperty('uploaded') || '{}');
+  const queue = fetchJson_(REPO_RAW + 'queue.json');
+  (queue.already_uploaded || []).forEach(u => {
+    if (!uploaded[u.nnn]) uploaded[u.nnn] = { id: u.id, date: u.date, at: null };
+  });
+  props.setProperty('uploaded', JSON.stringify(uploaded));
+}
+
+/** 動作確認用：ブラウザで開くと status と同じ内容を表示する。 */
+function doGet() {
+  const props = PropertiesService.getScriptProperties();
+  return ContentService.createTextOutput(JSON.stringify({
+    last_error: props.getProperty('last_error') || null,
+    uploaded: JSON.parse(props.getProperty('uploaded') || '{}'),
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ---------- helpers ----------
+function fetchJson_(url) {
+  return JSON.parse(UrlFetchApp.fetch(url + '?t=' + Date.now()).getContentText());
+}
+
+function githubPut_(path, content, message) {
+  const token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+  if (!token) throw new Error('GITHUB_TOKEN が未設定です');
+  const url = 'https://api.github.com/repos/' + OWNER + '/' + REPO + '/contents/' + path;
+  const headers = { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' };
+  const cur = UrlFetchApp.fetch(url, { headers: headers, muteHttpExceptions: true });
+  const sha = cur.getResponseCode() === 200 ? JSON.parse(cur.getContentText()).sha : undefined;
+  const body = {
+    message: message,
+    content: Utilities.base64Encode(content, Utilities.Charset.UTF_8),
+    branch: 'main',
+  };
+  if (sha) body.sha = sha;
+  const res = UrlFetchApp.fetch(url, {
+    method: 'put', headers: headers, contentType: 'application/json',
+    payload: JSON.stringify(body), muteHttpExceptions: true,
+  });
+  if (res.getResponseCode() >= 300) {
+    throw new Error('GitHub への書き込みに失敗: ' + res.getResponseCode() + ' ' + res.getContentText().slice(0, 200));
+  }
+}
