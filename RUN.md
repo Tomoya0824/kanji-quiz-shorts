@@ -1,68 +1,78 @@
 # 自動投稿手順（スケジュール実行用）
 
-1日1回（19:46 JST）実行し、クイズのショートを1本作って公開投稿する。ジャンルは複数あり、再生数のデータで配分を決める。上から順に実行する。
+1日2回（6:46 / 18:46 JST）実行し、クイズのショートを1本作って **投稿待ちリスト `queue.json` に積む**。
+YouTube への投稿は Google Apps Script（`apps_script/Code.gs`）が1時間ごとに `queue.json` を見て自動で行う（7時台・19時台に公開される想定）。
+条件を満たすと実行が3回（6:46 / 11:46 / 18:46）に増える。上から順に実行する。
 
-**Zapier は無料プラン（月100タスク）で運用する。** MCP 呼び出し1回＝2タスクなので月50回まで。
-内訳の目安：投稿 1回/日（月30〜31回）＋ 再生数取得 週2回（月約9回）＝ 約40回。
-`log.md` の各行末に `[zapier+N]`（その回の成功したZapier呼び出し回数）を付けて記録し、
-当月（暦月）の合計が **44回以上** なら再生数の取得はしない（投稿を優先）。**48回以上** ならその月は投稿もせず「上限回避」と記録して終了する。
+**Zapier は使わない。** 投稿・再生数取得とも Apps Script 側で行う。
 
 関連ファイル：
 - `GENRES.md` … ジャンルごとの作り方とJSONのキー（**必ず読む**）
-- `genre_plan.md` … 今日どのジャンルを作るかのルールと今週の予定
-- `quizzes/NNN.json` … 出題データ（投稿後に `youtube_id` を書き込む）
-- `stats.csv` … 再生数の記録
-- `insights.md` … 分析結果と「次に試すこと」
-- `log.md` … 実行ログ（`日付 NNN category 問題の要約 URL [zapier+N]`）
+- `genre_plan.md` … どのジャンルを作るかのルールと今週の予定
+- `queue.json` … 投稿待ちリスト（Claude が追加、Apps Script が投稿）
+- `status.json` … Apps Script が書き込む投稿結果（`uploaded`：番号→動画ID）・再生数（`stats`）・エラー（`last_error`）
+- `quizzes/NNN.json` … 出題データ
+- `stats.csv` / `insights.md` / `log.md` … 記録と分析
+- スケジュールタスクID：`trig_01V4JuSBHgStCU5D6zxyeLUh`
 
 ## 1. 準備
-- リポジトリ `Tomoya0824/kanji-quiz-shorts` を clone（無ければ push 権限で接続してから）。
-- `log.md` に今日の投稿済み行があれば何もせず終了（1日1本）。
-- `log.md` の `[zapier+N]` を当月分合計し、上の上限ルールを確認する。
+- リポジトリ `Tomoya0824/kanji-quiz-shorts` を clone（無ければ push 権限で接続してから）。作業中も push 前に必ず `git pull --rebase`（Apps Script が `status.json` を随時コミットするため）。
+- 現在の日本時間から今回の枠（朝6時台 / 昼11時台 / 夕18時台）を決める。`log.md` に今日のその枠の行があれば何もせず終了。
 - `quizzes/` の最大番号 + 1 を今回の番号 `NNN`（3桁ゼロ埋め）とする。
 
-## 2. 再生数の取得と分析（月曜と木曜のみ。それ以外は `insights.md` を読むだけ）
-- `youtube_id` を持つ quiz を新しい順に最大50件集め、Zapier の YouTube `youtube_make_api_get_request`（action `_zap_raw_request`）で
-  `GET https://www.googleapis.com/youtube/v3/videos`、querystring `part=statistics`、`id=カンマ区切り` を**1回だけ**呼ぶ。
-- `stats.csv` に `取得日時,NNN,youtube_id,経過時間h,views,likes,comments` で追記。
+## 2. 前回までの結果を取り込む（毎回）
+- `status.json` を読む。
+  - `uploaded` に載った番号の `quizzes/NNN.json` に `youtube_id` が無ければ書き込み、`log.md` のその行に URL を追記する。
+  - `last_error` があれば内容を `log.md` に書き、報告にも含める（投稿が止まっている可能性）。
+  - `updated` が12時間以上前なら「Apps Script が止まっている可能性」として報告する。
+  - `queue.json` の items のうち、作成から6時間以上たっても `uploaded` に無いものがあれば報告する。
+- `stats` を `stats.csv` に `取得日時,NNN,youtube_id,経過時間h,views,likes,comments` で追記（同じ取得日時の重複は追記しない）。
+
+## 3. 分析（夕方の枠のみ。それ以外は `insights.md` を読むだけ）
 - `insights.md` を書き直す：
   - 投稿72時間時点（近い値で可）の再生数で比較。72時間未満の動画は判断に使わない。
-  - **ジャンル（category）ごと**の平均を最初に出し、次にジャンル内で `difficulty` / `genre` / `hook_type` / 曜日 ごとの傾向を見る。
+  - **ジャンル（category）ごと**の平均を最初に出し、次にジャンル内で `difficulty` / `genre` / `hook_type` / 枠（朝・昼・夕）ごとの傾向を見る。
   - いいね率・コメント率が高い動画も挙げる。
   - 最後に「次に試すこと」を3つ。データが少ないうちはそう明記する。
-- **月曜**は `genre_plan.md` のルールに従って、探索期→最適化期への切り替え判定と「今週の予定」の更新も行う。
+- **月曜の夕方**は `genre_plan.md` のルールで探索期→最適化期の判定と「今週の予定」の更新も行う。
 
-## 3. 今日のジャンルを決めて出題を作る（`quizzes/NNN.json`）
-- `genre_plan.md` に従って今日の category を決める。
+## 4. 今回のジャンルを決めて出題を作る（`quizzes/NNN.json`）
+- `genre_plan.md` に従って category を決める。
 - `GENRES.md` のそのジャンルの定義を読み、共通キーをすべて埋める。
 - `insights.md` を読み、そのジャンル内では約7割は伸びている型、約3割は新しい型を試す。
 - 出題済みの `question` と重複・酷似するものは使わない。
 
-## 4. 事実確認（必須）
+## 5. 事実確認（必須）
 - 答え・意味・由来/解説を、ジャンル定義に書かれた種類の信頼できる情報源で Web 検索して確認する。
 - 確認できなければその問題は捨てて作り直す。誤答の選択肢が実は正しい、ということがないかも確認する。
 - なぞなぞは「答えが一つに決まるか」「解説で納得できるか」を自分で厳しくチェックする。
 
-## 5. 動画生成と確認
+## 6. 動画生成と確認
 ```
 python3 make_short.py quizzes/NNN.json videos/NNN.mp4
 ```
 - 0秒・2.5秒・7.5秒・10.5秒のフレームを切り出して目視確認（文字のはみ出し・豆腐文字・句読点だけの行が無いこと）。崩れたら文言を短くして作り直す。
-- 動画は約12.4秒。0秒目から問題が全部見えている／カウント中に「A・B・Cでコメント」が出る／最後に冒頭の画面へ戻ってループする、が崩れていないこと。
 
-## 6. push → YouTube 投稿
-- `quizzes/NNN.json` と `videos/NNN.mp4` をコミットして main に push。
-- Zapier: YouTube（`YouTubeV4CLIAPI`）`upload_video`
-  - video: `https://raw.githubusercontent.com/Tomoya0824/kanji-quiz-shorts/main/videos/NNN.mp4`
-  - title / description / tags は JSON から
-  - privacy_status `public`, category_id `27`, made_for_kids `false`, default_language / default_audio_language `ja`, notify_subscribers `true`
-  - push 直後でURLが取れず失敗したら、1分待って1回だけ再試行。
-- 返ってきた動画IDを `quizzes/NNN.json` の `youtube_id` に書き込む。
+## 7. 投稿待ちリストに積んで push
+- `queue.json` の `items` に追加：
+  `{"nnn": "NNN", "video_path": "videos/NNN.mp4", "title": …, "description": …, "tags": […], "privacy": "public", "created": "ISO日時"}`
+- `quizzes/NNN.json`・`videos/NNN.mp4`・`queue.json`・`stats.csv` 等をコミットし、`git pull --rebase` してから main に push。
+- `log.md` に `日付 枠 NNN category 問題の要約 (待機中)` を1行追記して push（URL は次回以降に追記される）。
+- 失敗したらその回は積まない。理由を `log.md` に書いて終了（やり直しで2本積まない）。
+- **`queue.json` に未投稿が3本以上たまっていたら、新しく積まずに終了**し、Apps Script の停止として報告する。
 
-## 7. 記録
-- `log.md` に1行追記して、変更をすべて push。
-- 失敗したらその日は投稿しない。理由を `log.md` に書いて終了（やり直しで2本上げない）。
-- Zapier のタスク上限・YouTube の投稿上限に当たった場合は `log.md` に「上限」と明記する。
+## 8. 本数の自動調整（日曜の夕方の枠のみ）
+`log.md` と `stats.csv` を見て判断し、結果を `log.md` と報告に書く。
 
-## 8. 本数について
-Zapier 無料プランの範囲では1日1本が上限。本数は自動で増やさない。
+**2本 → 3本に増やす条件（すべて満たすとき）**
+- 1日2本の運用が14日以上続いている
+- 直近7日間に失敗・投稿の詰まりがない
+- 直近7日に投稿した動画の72時間再生数の平均が、その前の7日間の平均の90%以上（落ちていない）
+
+満たしたら、スケジュールタスク `trig_01V4JuSBHgStCU5D6zxyeLUh` の cron を `CRON_TZ=Asia/Tokyo 46 6,11,18 * * *` に更新する（`update_trigger`。プロンプトは変更しない）。
+
+**3本 → 2本に戻す条件（どれか1つ）**
+- 3本にしてから2週間以上たち、72時間再生数の平均が2本時代の平均の70%未満に落ちた
+- 投稿の詰まり・失敗が週に2回以上出た
+
+満たしたら cron を `CRON_TZ=Asia/Tokyo 46 6,18 * * *` に戻す。本数は最大3本まで。
