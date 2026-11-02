@@ -7,7 +7,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 W, H, FPS = 1080, 1920, 30
-T_HOOK, T_COUNT0, T_COUNT1, T_REVEAL, T_CTA, T_END = 0.0, 2.2, 7.2, 7.6, 14.0, 16.5
+# 0秒目から問題を全部見せる → 3秒カウント → 答え・意味・由来 → CTA → 冒頭の画面に戻してループ
+T_HOOK, T_COUNT0, T_COUNT1, T_REVEAL, T_CTA, T_LOOP, T_END = 0.0, 1.2, 4.2, 4.5, 9.5, 11.9, 12.4
 FONT_BLACK = "/usr/share/fonts/opentype/noto/NotoSansCJK-Black.ttc"
 FONT_BOLD = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
 SERIF = "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc"
@@ -54,6 +55,12 @@ def text_center(d, cx, cy, s, f, fill):
     d.text((cx - (b[2] - b[0]) / 2 - b[0], cy - (b[3] - b[1]) / 2 - b[1]), s, font=f, fill=fill)
 
 def frame(t, q, bg):
+    if t >= T_LOOP:  # 最後は冒頭の画面に戻してループ再生を自然にする
+        a = ease_out((t - T_LOOP) / 0.3)
+        return Image.blend(_frame(T_LOOP - 1 / FPS, q, bg), _frame(0.0, q, bg), a)
+    return _frame(t, q, bg)
+
+def _frame(t, q, bg):
     img = bg.copy()
     d = ImageDraw.Draw(img, "RGBA")
     revealed = t >= T_REVEAL
@@ -62,13 +69,10 @@ def frame(t, q, bg):
     text_center(d, W / 2, 130, q["series"], font(FONT_BOLD, 40), (255, 255, 255, 170))
 
     # hook
-    s = pop(t, T_HOOK + 0.1)
-    if s > 0:
-        f = font(FONT_BLACK, int(84 * s) or 1)
-        text_center(d, W / 2, 270, q["hook"], f, ACCENT)
+    text_center(d, W / 2, 270, q["hook"], font(FONT_BLACK, 84), ACCENT)
 
     # kanji card
-    s = pop(t, T_HOOK + 0.5, 0.45)
+    s = 1.0
     if s > 0:
         cw, ch = int(820 * s), int(520 * s)
         cy = 640
@@ -79,10 +83,8 @@ def frame(t, q, bg):
 
     # choices
     for i, c in enumerate(q["choices"]):
-        appear = T_HOOK + 1.2 + i * 0.25
-        a = ease_out((t - appear) / 0.3)
-        if a <= 0: continue
-        y = 1060 + i * 170 + (1 - a) * 60
+        a = 1.0
+        y = 1060 + i * 170
         is_ans = i == q["answer_index"]
         if revealed and is_ans:
             fill, txt, lab_bg = CORRECT + (255,), WHITE, (255, 255, 255, 60)
@@ -97,6 +99,10 @@ def frame(t, q, bg):
         text_center(d, W / 2 + 40, y + 68, c, font(FONT_BLACK, 64), txt)
         if revealed and is_ans:
             d.ellipse([x1 - 115, y + 30, x1 - 35, y + 110], outline=WHITE, width=10)
+
+    # 答える前にコメントを促す
+    if not revealed:
+        text_center(d, W / 2, 1835, "A・B・C どれ？ コメントで答えてね！", font(FONT_BLACK, 50), ACCENT)
 
     # countdown ring
     if T_COUNT0 <= t < T_COUNT1 + 0.2:
@@ -167,12 +173,12 @@ def make_audio(path):
     def add(sec, sig):
         s0 = int(sec * SR); out[s0:s0 + len(sig)] += sig[: n - s0]
     add(T_HOOK + 0.1, tone(880, 0.3, 0.25) + tone(1320, 0.3, 0.15))
-    for i in range(5):  # countdown ticks
+    for i in range(int(round(T_COUNT1 - T_COUNT0))):  # countdown ticks
         add(T_COUNT0 + i, tone(1500, 0.08, 0.35, 40))
     for i, f in enumerate([523.3, 659.3, 784.0, 1046.5]):  # reveal chime
         add(T_REVEAL + i * 0.08, tone(f, 0.9, 0.22, 3))
     add(T_CTA, tone(988, 0.25, 0.2) + tone(1318, 0.25, 0.15))
-    fade = np.minimum(1, (T_END - t) / 0.8)
+    fade = np.minimum(1, (T_END - t) / 0.3)
     out *= fade
     out = np.clip(out / max(1e-6, np.abs(out).max()) * 0.8, -1, 1)
     with wave.open(str(path), "wb") as w:
