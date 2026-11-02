@@ -60,30 +60,60 @@ def frame(t, q, bg):
         return Image.blend(_frame(T_LOOP - 1 / FPS, q, bg), _frame(0.0, q, bg), a)
     return _frame(t, q, bg)
 
+def text_w(d, s, f):
+    b = d.textbbox((0, 0), s, font=f)
+    return b[2] - b[0]
+
+def wrap(d, text, f, maxw):
+    """文字単位で折り返す（日本語向け）。"""
+    lines, cur = [], ""
+    for ch in text:
+        if ch == "\n":
+            lines.append(cur); cur = ""; continue
+        if cur and text_w(d, cur + ch, f) > maxw and ch not in "、。，．？！?!」』）)ー〜…":
+            lines.append(cur); cur = ch
+        else:
+            cur += ch
+    if cur: lines.append(cur)
+    return lines
+
+def fit_one_line(d, text, path, start, minimum, maxw):
+    size = start
+    while size > minimum and text_w(d, text, font(path, size)) > maxw:
+        size -= 2
+    return font(path, size)
+
 def _frame(t, q, bg):
     img = bg.copy()
     d = ImageDraw.Draw(img, "RGBA")
     revealed = t >= T_REVEAL
+    style = q.get("style", "kanji")  # kanji: 大きな語を1つ / text: 文章の問題
 
-    # series label
+    # series label & hook
     text_center(d, W / 2, 130, q["series"], font(FONT_BOLD, 40), (255, 255, 255, 170))
+    text_center(d, W / 2, 270, q["hook"], fit_one_line(d, q["hook"], FONT_BLACK, 84, 56, W - 120), ACCENT)
 
-    # hook
-    text_center(d, W / 2, 270, q["hook"], font(FONT_BLACK, 84), ACCENT)
-
-    # kanji card
-    s = 1.0
-    if s > 0:
-        cw, ch = int(820 * s), int(520 * s)
-        cy = 640
-        d.rounded_rectangle([W / 2 - cw / 2, cy - ch / 2, W / 2 + cw / 2, cy + ch / 2], 48, fill=(255, 255, 255, 245))
-        if s > 0.3:
-            size = int(300 * s) if len(q["question"]) <= 2 else int(560 / len(q["question"]) * s)
-            text_center(d, W / 2, cy - 10, q["question"], font(SERIF, size), (25, 25, 45))
+    # question card (y 380-900)
+    cy = 640
+    d.rounded_rectangle([W / 2 - 410, cy - 260, W / 2 + 410, cy + 260], 48, fill=(255, 255, 255, 245))
+    if style == "kanji":
+        n = len(q["question"])
+        size = 300 if n <= 2 else int(640 / n)
+        text_center(d, W / 2, cy - 10, q["question"], font(SERIF, size), (25, 25, 45))
+    else:
+        for size in range(78, 42, -4):
+            f = font(FONT_BLACK, size)
+            lines = wrap(d, q["question"], f, 720)
+            lh = int(size * 1.4)
+            if len(lines) * lh <= 440:
+                break
+        y = cy - len(lines) * lh / 2 + lh / 2
+        for ln in lines:
+            text_center(d, W / 2, y, ln, f, (25, 25, 45)); y += lh
 
     # choices
+    x0, x1 = 120, W - 120
     for i, c in enumerate(q["choices"]):
-        a = 1.0
         y = 1060 + i * 170
         is_ans = i == q["answer_index"]
         if revealed and is_ans:
@@ -91,12 +121,11 @@ def _frame(t, q, bg):
         elif revealed:
             fill, txt, lab_bg = (60, 60, 90, 200), DIM, (255, 255, 255, 25)
         else:
-            fill, txt, lab_bg = (255, 255, 255, int(40 * a)), WHITE, ACCENT + (255,)
-        x0, x1 = 120, W - 120
-        d.rounded_rectangle([x0, y, x1, y + 140], 70, fill=fill, outline=(255, 255, 255, int(120 * a)), width=3)
+            fill, txt, lab_bg = (255, 255, 255, 40), WHITE, ACCENT + (255,)
+        d.rounded_rectangle([x0, y, x1, y + 140], 70, fill=fill, outline=(255, 255, 255, 120), width=3)
         d.ellipse([x0 + 22, y + 22, x0 + 118, y + 118], fill=lab_bg)
         text_center(d, x0 + 70, y + 70, LABELS[i], font(FONT_BLACK, 52), (25, 25, 45) if not revealed else txt)
-        text_center(d, W / 2 + 40, y + 68, c, font(FONT_BLACK, 64), txt)
+        text_center(d, W / 2 + 30, y + 68, c, fit_one_line(d, c, FONT_BLACK, 64, 34, 620), txt)
         if revealed and is_ans:
             d.ellipse([x1 - 115, y + 30, x1 - 35, y + 110], outline=WHITE, width=10)
 
@@ -108,42 +137,51 @@ def _frame(t, q, bg):
     if T_COUNT0 <= t < T_COUNT1 + 0.2:
         remain = max(0.0, T_COUNT1 - t)
         n = math.ceil(remain) if remain > 0 else 0
-        cx, cy, r = W / 2, 1640, 95
-        d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(0, 0, 0, 90))
+        cx, ccy, r = W / 2, 1640, 95
+        d.ellipse([cx - r, ccy - r, cx + r, ccy + r], fill=(0, 0, 0, 90))
         frac = remain / (T_COUNT1 - T_COUNT0)
-        d.arc([cx - r, cy - r, cx + r, cy + r], -90, -90 + 360 * frac, fill=ACCENT, width=14)
+        d.arc([cx - r, ccy - r, cx + r, ccy + r], -90, -90 + 360 * frac, fill=ACCENT, width=14)
         if n > 0:
             bump = 1 + 0.25 * max(0, (n - remain) - 0.75) * 4
-            text_center(d, cx, cy - 4, str(n), font(FONT_BLACK, int(110 * bump)), WHITE)
+            text_center(d, cx, ccy - 4, str(n), font(FONT_BLACK, int(110 * bump)), WHITE)
 
-    # reveal panel
+    # reveal panel: 意味（必須）・例（任意）・由来/解説（任意）
     if revealed:
         a = ease_out((t - T_REVEAL - 0.4) / 0.4)
         if a > 0:
-            origin = q.get("origin", "")
-            lines = [origin[i:i + 20] for i in range(0, len(origin), 20)][:2]
-            ph = 190 + (40 + 46 * len(lines) if lines else 0)
+            example = q.get("example", "")
+            extra = q.get("origin", "")
+            f_main, f_ex, f_extra = font(FONT_BOLD, 42), font(FONT_BOLD, 38), font(FONT_BOLD, 36)
+            main_lines = wrap(d, f"{q.get('meaning_label', '意味')}：{q['meaning']}", f_main, W - 200)[:2]
+            ex_lines = wrap(d, example, f_ex, W - 200)[:1] if example else []
+            label = q.get("origin_label", "由来")
+            extra_lines = wrap(d, f"{label}：{extra}", f_extra, W - 200) if extra else []
+            room = 345 - 40 - 58 * len(main_lines) - 54 * len(ex_lines) - (30 if extra_lines else 0)
+            extra_lines = extra_lines[:max(0, room // 46)]
+            ph = 40 + 58 * len(main_lines) + 54 * len(ex_lines) + (30 + 46 * len(extra_lines) if extra_lines else 0)
             y0 = 1555 + (1 - a) * 80
             d.rounded_rectangle([70, y0, W - 70, y0 + ph], 36, fill=(0, 0, 0, int(150 * a)))
-            text_center(d, W / 2, y0 + 60, f"意味：{q['meaning']}", font(FONT_BOLD, 44), (255, 255, 255, int(255 * a)))
-            text_center(d, W / 2, y0 + 135, q["example"], font(FONT_BOLD, 40), ACCENT + (int(255 * a),))
-            if lines:
-                # 由来は答え発表の少し後に出す
-                b = ease_out((t - T_REVEAL - 1.6) / 0.4)
+            y = y0 + 20 + 29
+            for ln in main_lines:
+                text_center(d, W / 2, y, ln, f_main, (255, 255, 255, int(255 * a))); y += 58
+            for ln in ex_lines:
+                text_center(d, W / 2, y - 2, ln, f_ex, ACCENT + (int(255 * a),)); y += 54
+            if extra_lines:
+                b = ease_out((t - T_REVEAL - 1.6) / 0.4)  # 由来・解説は少し後に出す
                 if b > 0:
-                    d.line([140, y0 + 182, W - 140, y0 + 182], fill=(255, 255, 255, int(60 * b)), width=2)
-                    for k, ln in enumerate(lines):
-                        prefix = "由来：" if k == 0 else ""
-                        text_center(d, W / 2, y0 + 220 + k * 46, prefix + ln, font(FONT_BOLD, 38), (200, 220, 255, int(255 * b)))
-        s = pop(t, T_REVEAL, 0.4)
-        if s > 0 and t < T_CTA:
-            text_center(d, W / 2, 985, "正解は…", font(FONT_BLACK, int(60 * s) or 1), WHITE)
+                    d.line([140, y - 22, W - 140, y - 22], fill=(255, 255, 255, int(60 * b)), width=2)
+                    y += 8
+                    for ln in extra_lines:
+                        text_center(d, W / 2, y, ln, f_extra, (200, 220, 255, int(255 * b))); y += 46
+        s2 = pop(t, T_REVEAL, 0.4)
+        if s2 > 0 and t < T_CTA:
+            text_center(d, W / 2, 985, "正解は…", font(FONT_BLACK, int(60 * s2) or 1), WHITE)
 
     # CTA
     if t >= T_CTA:
-        s = pop(t, T_CTA, 0.4)
-        d.rounded_rectangle([60, 920, W - 60, 1040], 40, fill=ACCENT + (int(255 * min(1, s)),))
-        text_center(d, W / 2, 980, q["cta"], font(FONT_BLACK, int(58 * max(s, 0.01))), (25, 25, 45))
+        s2 = pop(t, T_CTA, 0.4)
+        d.rounded_rectangle([60, 920, W - 60, 1040], 40, fill=ACCENT + (int(255 * min(1, s2)),))
+        text_center(d, W / 2, 980, q["cta"], font(FONT_BLACK, int(58 * max(s2, 0.01))), (25, 25, 45))
     return img
 
 # ---------- audio ----------

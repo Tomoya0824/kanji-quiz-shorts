@@ -1,4 +1,6 @@
 {
+  "category": "難読漢字",
+  "style": "kanji",
   "hook": "この漢字、読める？",
   "question": "強ち",
   "choices": [
@@ -25,5 +27,7 @@
   "difficulty": "標準",
   "genre": "副詞",
   "hook_type": "読める？",
-  "youtube_id": "rEfvBEAqZ4s"
+  "youtube_id": "rEfvBEAqZ4s",
+  "meaning_label": "意味",
+  "origin_label": "由来"
 }
