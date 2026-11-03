@@ -86,7 +86,8 @@ def fit_one_line(d, text, path, start, minimum, maxw):
 def _frame(t, q, bg):
     img = bg.copy()
     d = ImageDraw.Draw(img, "RGBA")
-    revealed = t >= T_REVEAL
+    revealed = q.get("reveal", False) and t >= T_REVEAL
+    endcard = (not q.get("reveal", False)) and t >= T_COUNT1
     style = q.get("style", "kanji")  # kanji: 大きな語を1つ / text: 文章の問題
 
     # series label & hook
@@ -130,11 +131,11 @@ def _frame(t, q, bg):
             d.ellipse([x1 - 115, y + 30, x1 - 35, y + 110], outline=WHITE, width=10)
 
     # 答える前にコメントを促す
-    if not revealed:
+    if not revealed and not endcard:
         text_center(d, W / 2, 1835, "A・B・C どれ？ コメントで答えてね！", font(FONT_BLACK, 50), ACCENT)
 
     # countdown ring
-    if T_COUNT0 <= t < T_COUNT1 + 0.2:
+    if T_COUNT0 <= t < T_COUNT1 + 0.2 and not endcard:
         remain = max(0.0, T_COUNT1 - t)
         n = math.ceil(remain) if remain > 0 else 0
         cx, ccy, r = W / 2, 1640, 95
@@ -177,8 +178,17 @@ def _frame(t, q, bg):
         if s2 > 0 and t < T_CTA:
             text_center(d, W / 2, 985, "正解は…", font(FONT_BLACK, int(60 * s2) or 1), WHITE)
 
+    # 答えを見せない終わり方：コメントで答えてもらう
+    if endcard:
+        a = pop(t, T_COUNT1, 0.4)
+        y0 = 1545 + (1 - min(1, a)) * 60
+        d.rounded_rectangle([60, y0, W - 60, y0 + 330], 44, fill=ACCENT + (int(255 * min(1, a)),))
+        text_center(d, W / 2, y0 + 80, "答えをコメントで教えて！", font(FONT_BLACK, max(1, int(70 * a))), (25, 25, 45))
+        text_center(d, W / 2, y0 + 175, "A・B・C どれだと思う？", font(FONT_BLACK, max(1, int(52 * a))), (25, 25, 45))
+        text_center(d, W / 2, y0 + 262, q.get("cta", ""), font(FONT_BOLD, max(1, int(42 * a))), (60, 50, 20))
+
     # CTA
-    if t >= T_CTA:
+    if q.get("reveal", False) and t >= T_CTA:
         s2 = pop(t, T_CTA, 0.4)
         d.rounded_rectangle([60, 920, W - 60, 1040], 40, fill=ACCENT + (int(255 * min(1, s2)),))
         text_center(d, W / 2, 980, q["cta"], font(FONT_BLACK, int(58 * max(s2, 0.01))), (25, 25, 45))
@@ -209,7 +219,9 @@ def make_audio(path):
         b = tone(chords[(k // 4) % 4][0] / 2, 0.4, 0.12, 8)
         out[s0:s0 + len(b)] += b[: n - s0]
     def add(sec, sig):
-        s0 = int(sec * SR); out[s0:s0 + len(sig)] += sig[: n - s0]
+        s0 = int(sec * SR)
+        if s0 >= n: return
+        out[s0:s0 + len(sig)] += sig[: n - s0]
     add(T_HOOK + 0.1, tone(880, 0.3, 0.25) + tone(1320, 0.3, 0.15))
     for i in range(int(round(T_COUNT1 - T_COUNT0))):  # countdown ticks
         add(T_COUNT0 + i, tone(1500, 0.08, 0.35, 40))
@@ -223,8 +235,16 @@ def make_audio(path):
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
         w.writeframes((out * 32767).astype(np.int16).tobytes())
 
+def set_timings(reveal):
+    global T_HOOK, T_COUNT0, T_COUNT1, T_REVEAL, T_CTA, T_LOOP, T_END
+    if reveal:   # 答えを動画内で発表する（旧形式）
+        T_HOOK, T_COUNT0, T_COUNT1, T_REVEAL, T_CTA, T_LOOP, T_END = 0.0, 1.2, 4.2, 4.5, 9.5, 11.9, 12.4
+    else:        # 答えは見せず、コメントで答えてもらう（標準）
+        T_HOOK, T_COUNT0, T_COUNT1, T_REVEAL, T_CTA, T_LOOP, T_END = 0.0, 0.8, 5.8, 99.0, 5.8, 8.3, 8.8
+
 def main(qpath, outpath):
     q = json.loads(Path(qpath).read_text(encoding="utf-8"))
+    set_timings(q.get("reveal", False))
     wav = Path(outpath).with_suffix(".wav")
     make_audio(wav)
     bg = make_background()
