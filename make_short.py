@@ -86,8 +86,8 @@ def fit_one_line(d, text, path, start, minimum, maxw):
 def _frame(t, q, bg):
     img = bg.copy()
     d = ImageDraw.Draw(img, "RGBA")
-    revealed = q.get("reveal", False) and t >= T_REVEAL
-    endcard = (not q.get("reveal", False)) and t >= T_COUNT1
+    revealed = q.get("reveal", True) and t >= T_REVEAL
+    endcard = (not q.get("reveal", True)) and t >= T_COUNT1
     style = q.get("style", "kanji")  # kanji: 大きな語を1つ / text: 文章の問題
 
     # series label & hook
@@ -188,7 +188,7 @@ def _frame(t, q, bg):
         text_center(d, W / 2, y0 + 262, q.get("cta", ""), font(FONT_BOLD, max(1, int(42 * a))), (60, 50, 20))
 
     # CTA
-    if q.get("reveal", False) and t >= T_CTA:
+    if q.get("reveal", True) and t >= T_CTA:
         s2 = pop(t, T_CTA, 0.4)
         d.rounded_rectangle([60, 920, W - 60, 1040], 40, fill=ACCENT + (int(255 * min(1, s2)),))
         text_center(d, W / 2, 980, q["cta"], font(FONT_BLACK, int(58 * max(s2, 0.01))), (25, 25, 45))
@@ -238,13 +238,13 @@ def make_audio(path):
 def set_timings(reveal):
     global T_HOOK, T_COUNT0, T_COUNT1, T_REVEAL, T_CTA, T_LOOP, T_END
     if reveal:   # 答えを動画内で発表する（旧形式）
-        T_HOOK, T_COUNT0, T_COUNT1, T_REVEAL, T_CTA, T_LOOP, T_END = 0.0, 1.2, 4.2, 4.5, 9.5, 11.9, 12.4
+        T_HOOK, T_COUNT0, T_COUNT1, T_REVEAL, T_CTA, T_LOOP, T_END = 0.0, 1.2, 4.2, 4.5, 10.5, 12.9, 13.4
     else:        # 答えは見せず、コメントで答えてもらう（標準）
         T_HOOK, T_COUNT0, T_COUNT1, T_REVEAL, T_CTA, T_LOOP, T_END = 0.0, 0.8, 5.8, 99.0, 5.8, 8.3, 8.8
 
 def main(qpath, outpath):
     q = json.loads(Path(qpath).read_text(encoding="utf-8"))
-    set_timings(q.get("reveal", False))
+    set_timings(q.get("reveal", True))
     wav = Path(outpath).with_suffix(".wav")
     make_audio(wav)
     bg = make_background()
