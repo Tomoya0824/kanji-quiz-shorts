@@ -64,7 +64,18 @@ python3 make_short.py quizzes/NNN.json videos/NNN.mp4
 - 失敗したらその回は積まない。理由を `log.md` に書いて終了（やり直しで2本積まない）。
 - **`queue.json` に未投稿が3本以上たまっていたら、新しく積まずに終了**し、Apps Script の停止として報告する。
 
-## 8. 本数の自動調整（日曜の夕方の枠のみ）
+## 8. 収益化への進捗レポート（日曜の夕方の枠のみ）
+- Zapier の YouTube `youtube_make_api_get_request`（action `_zap_raw_request`）で
+  `GET https://www.googleapis.com/youtube/v3/channels`、querystring `part=statistics`、`mine=true` を**週1回だけ**呼ぶ（Zapier 無料枠：月約8タスクで収まる）。
+- `growth.csv` に `日付,登録者数,総再生数,動画数` を追記。
+- `stats.csv` から「直近90日に投稿した動画の再生数合計」（≒直近90日のShorts再生数の目安）を出す。
+- 収益化の条件と比べて `insights.md` の先頭に「収益化への進捗」として書き、報告にも1行入れる：
+  - 2027-01-31 までに参加申請する場合：登録者 1,000人 ＋ 直近90日のShorts再生 1,000万回
+  - 2027-02-01 以降の新規申請：登録者 1,000人 ＋ 直近90日のShorts再生 2,000万回
+  - 手前の目標（ファンディング機能のみ）：登録者 500人 ＋ 直近90日のShorts再生 300万回 ＋ 直近90日に3本以上の投稿
+  - 今のペースが続いた場合に何週間後に届くかの見込みも書く（伸び率は直近4週の週ごとの合計から出す）。
+
+## 9. 本数の自動調整（日曜の夕方の枠のみ）
 `log.md` と `stats.csv` を見て判断し、結果を `log.md` と報告に書く。
 
 **2本 → 3本に増やす条件（すべて満たすとき）**
