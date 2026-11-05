@@ -126,7 +126,7 @@ def _frame(t, q, bg):
         d.rounded_rectangle([x0, y, x1, y + 140], 70, fill=fill, outline=(255, 255, 255, 120), width=3)
         d.ellipse([x0 + 22, y + 22, x0 + 118, y + 118], fill=lab_bg)
         text_center(d, x0 + 70, y + 70, LABELS[i], font(FONT_BLACK, 52), (25, 25, 45) if not revealed else txt)
-        text_center(d, W / 2 + 30, y + 68, c, fit_one_line(d, c, FONT_BLACK, 64, 34, 620), txt)
+        text_center(d, W / 2 + 10, y + 68, c, fit_one_line(d, c, FONT_BLACK, 64, 34, 560), txt)  # 右端の正解マル(x1-115〜)と重ならない幅
         if revealed and is_ans:
             d.ellipse([x1 - 115, y + 30, x1 - 35, y + 110], outline=WHITE, width=10)
 
