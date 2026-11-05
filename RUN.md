@@ -15,6 +15,17 @@ YouTube への投稿は Google Apps Script（`apps_script/Code.gs`）が1時間�
 - `stats.csv` / `insights.md` / `log.md` … 記録と分析
 - スケジュールタスクID：`trig_01V4JuSBHgStCU5D6zxyeLUh`
 
+## 0. 承認フロー（2026-11-05 オーナー決定・最優先）
+**動画は、オーナーが内容を承認した下書きだけ生成する**（トークン節約のため）。
+- 下書き：`drafts/NNN.json`（`quizzes/NNN.json` と同じキー ＋ `"approved": false` と `"slot": "YYYY-MM-DD 朝/昼/夕"`）。
+- **夕方の枠**で、翌日の全枠（朝・夕、3本体制なら昼も）の下書きを作る（手順4・5：ジャンル決め・題材チェック・事実確認まで。動画は作らない）。push したあと、PushNotification で各下書きの「ジャンル／問題／選択肢と正解／解説／タイトル」をオーナーに送り、承認を待つ（この回の終わりの報告にも書く）。
+- オーナーがそのセッションで OK・修正を返したら、そのセッションで下書きを直して `"approved": true` にして push する（動画はまだ作らない）。
+- **各枠の実行**では、手順4・5の代わりに、その枠の `drafts/NNN.json` を確認する：
+  - `approved: true` → `approved`・`slot` を除いて `quizzes/NNN.json` に移し（`drafts/` からは削除）、手順6・7（動画生成・確認・queue 追加）を行う。
+  - 下書きが無い、または未承認 → **動画は作らず、その枠は投稿しない**。`log.md` に「未承認のため見送り」と書き、PushNotification で「未承認の下書きがある」と知らせて終了。
+- 番号 NNN は `quizzes/` と `drafts/` を合わせた最大番号 + 1。ジャンルの回し順も `drafts/` の下書きを含めて決める。出題の重複チェックも `drafts/` を含める。
+- 移行期：2026-11-06 夕の分は、2026-11-06 朝の回で下書きを作って通知する（その回は朝分の動画生成と夕分の下書き作成の両方を行う）。
+
 ## 1. 準備
 - リポジトリ `Tomoya0824/kanji-quiz-shorts` を clone（無ければ push 権限で接続してから）。作業中も push 前に必ず `git pull --rebase`（Apps Script が `status.json` を随時コミットするため）。
 - 現在の日本時間から今回の枠（朝6時台 / 昼11時台 / 夕18時台）を決める。`log.md` に今日のその枠の行があれば何もせず終了。
