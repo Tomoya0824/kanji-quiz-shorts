@@ -1,0 +1,35 @@
+{
+  "approved": false,
+  "slot": "2026-11-08 朝",
+  "category": "ウソみたいな雑学",
+  "style": "text",
+  "series": "毎日1問・ウソみたいな雑学",
+  "hook": "毎日見る卵の意外な秘密",
+  "question": "卵の殻には、小さな穴が\nいくつ開いている？",
+  "choices": [
+    "1万個以上",
+    "約1000個",
+    "約100個"
+  ],
+  "answer_index": 0,
+  "answer": "1万個以上",
+  "meaning_label": "正解",
+  "meaning": "最大で約1万7000個",
+  "origin_label": "解説",
+  "origin": "殻は目に見えない穴だらけ。\nこの穴を空気や水分が通り抜けている",
+  "cta": "フォローで毎日ひとつ賢くなる！",
+  "difficulty": "難しい",
+  "genre": "食べ物（卵）",
+  "hook_type": "身近さアピール（毎日見る）",
+  "source": "Exploratorium「Science of Eggs: Anatomy of an Egg」、National Agriculture in the Classroom",
+  "title": "【雑学クイズ】卵の殻には小さな穴がいくつある？ #雑学 #shorts",
+  "description": "卵の殻の穴の数、わかりましたか？\n正解は「1万個以上」。卵の殻の表面には最大で約1万7000個もの小さな穴（気孔）があり、空気や水分が通り抜けられるようになっています。殻の表面は「クチクラ」という薄い膜で覆われ、細菌やほこりが入るのを防いでいます。\n出典：Exploratorium「Science of Eggs: Anatomy of an Egg」\n\n毎日1問、ひとつ賢くなるクイズを出題しています。\n#雑学 #豆知識 #トリビア #クイズ #shorts",
+  "tags": [
+    "雑学",
+    "豆知識",
+    "トリビア",
+    "クイズ",
+    "卵",
+    "shorts"
+  ]
+}
