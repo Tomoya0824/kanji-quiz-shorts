@@ -1,6 +1,4 @@
 {
-  "approved": false,
-  "slot": "2026-11-09 朝",
   "category": "四字熟語・ことわざ",
   "style": "text",
   "series": "毎日1問・四字熟語＆ことわざ",
@@ -14,7 +12,7 @@
   "answer_index": 2,
   "answer": "お酒を飲めなかった",
   "meaning_label": "意味",
-  "meaning": "蛇足＝付け加える必要のない余計なもの",
+  "meaning": "付け加える必要のない余計なもの",
   "example": "例：最後の一言は蛇足だった",
   "origin_label": "由来",
   "origin": "酒を賭けた蛇の絵の早描き競争。\n一番に描けたのに足を足して負けた",
