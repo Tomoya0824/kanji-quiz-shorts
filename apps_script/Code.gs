@@ -7,6 +7,7 @@
  *
  * 必要な設定：
  *  - サービス「YouTube Data API v3」（識別子 YouTube）… appsscript.json で追加済み
+ *  - サービス「YouTube Analytics API」（識別子 YouTubeAnalytics）… 視聴維持率の取得用（任意。未追加でも投稿は動く）
  *  - スクリプト プロパティ GITHUB_TOKEN … このリポジトリだけに Contents の読み書き権限を持つトークン
  */
 
@@ -100,6 +101,7 @@ function pushStatus() {
     last_error: props.getProperty('last_error') || null,
     uploaded: uploaded,
     stats: stats,
+    analytics: fetchAnalytics_(ids),
   };
   githubPut_('status.json', JSON.stringify(status, null, 2), 'Apps Script: 投稿結果と再生数を更新');
   props.setProperty('last_status_push', String(Date.now()));
@@ -133,6 +135,39 @@ function doGet() {
     last_error: props.getProperty('last_error') || null,
     uploaded: JSON.parse(props.getProperty('uploaded') || '{}'),
   })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * 動画ごとの視聴維持（平均視聴率％・平均視聴秒数など）を YouTube Analytics API から取る。
+ * Analytics は2〜3日遅れで集計されるため、投稿直後の動画は出ないことがある。
+ * サービス未追加・権限なしの場合は {error: …} を返し、投稿や再生数の更新は止めない。
+ */
+function fetchAnalytics_(ids) {
+  try {
+    if (typeof YouTubeAnalytics === 'undefined') return { error: 'YouTubeAnalytics サービス未追加' };
+    const end = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+    const out = {};
+    for (let i = 0; i < ids.length; i += 50) {
+      const r = YouTubeAnalytics.Reports.query({
+        ids: 'channel==MINE',
+        startDate: '2026-11-01',
+        endDate: end,
+        metrics: 'views,averageViewDuration,averageViewPercentage,likes,shares,subscribersGained',
+        dimensions: 'video',
+        filters: 'video==' + ids.slice(i, i + 50).join(','),
+        maxResults: 50,
+      });
+      const cols = (r.columnHeaders || []).map(h => h.name);
+      (r.rows || []).forEach(row => {
+        const o = {};
+        cols.forEach((c, j) => { if (c !== 'video') o[c] = row[j]; });
+        out[row[cols.indexOf('video')]] = o;
+      });
+    }
+    return { as_of: end, videos: out };
+  } catch (e) {
+    return { error: String(e).slice(0, 200) };
+  }
 }
 
 // ---------- helpers ----------

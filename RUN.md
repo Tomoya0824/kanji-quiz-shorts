@@ -40,6 +40,8 @@ YouTube への投稿は Google Apps Script（`apps_script/Code.gs`）が1時間�
   - `updated` が12時間以上前なら「Apps Script が止まっている可能性」として報告する。
   - `queue.json` の items のうち、作成から6時間以上たっても `uploaded` に無いものがあれば報告する。
 - `stats` を `stats.csv` に `取得日時,NNN,youtube_id,経過時間h,views,likes,comments` で追記（同じ取得日時の重複は追記しない）。
+- `analytics.videos` があれば `retention.csv` に `取得日,NNN,youtube_id,views,averageViewDuration,averageViewPercentage,likes,shares,subscribersGained` で追記（同じ取得日の重複は追記しない。ファイルが無ければ見出し行から作る）。`analytics.error` は報告に1行入れるだけでよい（投稿は止まらない）。
+- 夕方の分析では、`retention.csv` の平均視聴率（％）もジャンル・型ごとに比べる。**ショートでは平均視聴率（ループ込みで100%超もあり得る）が初期配信の続き方を最も左右する**ので、いいね率と並ぶ主指標にする。
 
 ## 3. 分析（夕方の枠のみ。それ以外は `insights.md` を読むだけ）
 - `insights.md` を書き直す：
