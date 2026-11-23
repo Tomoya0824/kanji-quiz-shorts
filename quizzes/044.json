@@ -1,6 +1,4 @@
 {
-  "approved": false,
-  "slot": "2026-11-24 朝",
   "category": "四字熟語・ことわざ",
   "style": "kanji",
   "series": "毎日1問・四字熟語＆ことわざ",
@@ -14,7 +12,7 @@
   "answer_index": 1,
   "answer": "霧",
   "meaning_label": "意味",
-  "meaning": "手がかりがなく、どうしていいか迷うこと",
+  "meaning": "迷って方針や見込みが立たないこと",
   "example": "例：捜査は五里霧中だ",
   "origin_label": "由来",
   "origin": "後漢の張楷が術で五里四方に\n霧を起こした故事から（後漢書）",
