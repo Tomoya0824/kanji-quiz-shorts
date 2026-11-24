@@ -1,6 +1,4 @@
 {
-  "approved": false,
-  "slot": "2026-11-25 朝",
   "category": "難読漢字",
   "style": "kanji",
   "series": "毎日1問・漢字クイズ",
@@ -14,7 +12,7 @@
   "answer_index": 0,
   "answer": "かまぼこ",
   "meaning_label": "意味",
-  "meaning": "魚のすり身を蒸したり焼いたりした食品",
+  "meaning": "魚のすり身を加熱して固めた食品",
   "example": "例：おせちに紅白の蒲鉾",
   "origin_label": "由来",
   "origin": "昔はちくわ形で、植物の蒲(がま)の穂に\n似ていたから「蒲の穂→蒲鉾」に",
