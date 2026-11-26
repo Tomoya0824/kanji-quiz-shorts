@@ -1,6 +1,4 @@
 {
-  "approved": false,
-  "slot": "2026-11-27 朝",
   "category": "日本語の誤用",
   "style": "kanji",
   "series": "毎日1問・その日本語、合ってる？",
@@ -14,7 +12,7 @@
   "answer_index": 1,
   "answer": "足",
   "meaning_label": "正解",
-  "meaning": "足をすくわれる＝すきをつかれて失敗する",
+  "meaning": "足をすくわれる＝隙を突かれ失敗する",
   "example": "例：格下の相手に足をすくわれる",
   "origin_label": "解説",
   "origin": "「すくう」は下から払い上げる意。払うのは足。\n「足元」は64%が使う誤用（文化庁H28）",
