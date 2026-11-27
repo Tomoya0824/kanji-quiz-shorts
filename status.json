@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-27T18:21:41.217Z",
+  "updated": "2026-11-27T22:21:43.796Z",
   "last_error": null,
   "uploaded": {
     "002": {
@@ -251,6 +251,11 @@
       "id": "r5nU6D2HDzk",
       "date": "2026-11-27",
       "at": "2026-11-27T10:21:42.773Z"
+    },
+    "052": {
+      "id": "p6W0_ZUjjWw",
+      "date": "2026-11-28",
+      "at": "2026-11-27T22:21:42.381Z"
     }
   },
   "stats": {
@@ -440,7 +445,7 @@
       "comments": 0
     },
     "4y-NR582wUE": {
-      "views": 1405,
+      "views": 1404,
       "likes": 83,
       "comments": 0
     },
@@ -490,18 +495,23 @@
       "comments": 0
     },
     "ABOrp0vTDL0": {
-      "views": 1064,
-      "likes": 46,
+      "views": 1059,
+      "likes": 48,
       "comments": 0
     },
     "Zfmmm9D9bbY": {
-      "views": 944,
+      "views": 945,
       "likes": 11,
       "comments": 0
     },
     "r5nU6D2HDzk": {
-      "views": 998,
-      "likes": 5,
+      "views": 1002,
+      "likes": 6,
+      "comments": 0
+    },
+    "p6W0_ZUjjWw": {
+      "views": 0,
+      "likes": 0,
       "comments": 0
     },
     "rEfvBEAqZ4s": {
